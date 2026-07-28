@@ -9,7 +9,10 @@
 
 ARG MOSP_REPO_URL=https://github.com/es-mind/MosP.git
 ARG MOSP_REF=master
-ARG TOMCAT_IMAGE=tomcat:9.0-jdk17-temurin
+# ビルド(javac)にはJDKが必要だが、実行はJREのみで足りるため
+# ベースイメージを分けて最終イメージからJDK/コンパイラ分の容量を削る。
+ARG TOMCAT_BUILD_IMAGE=tomcat:9.0-jdk17-temurin
+ARG TOMCAT_RUNTIME_IMAGE=tomcat:9.0-jre17-temurin
 ARG CONTEXT_PATH=ROOT
 
 # ---------------------------------------------------------------------------
@@ -31,7 +34,7 @@ RUN set -eux; \
 # ---------------------------------------------------------------------------
 # 2. コンパイル (Tomcat同梱のservlet-api/jsp-apiを使用し、実行環境とAPIバージョンを一致させる)
 # ---------------------------------------------------------------------------
-FROM ${TOMCAT_IMAGE} AS build
+FROM ${TOMCAT_BUILD_IMAGE} AS build
 WORKDIR /build
 COPY --from=source /src/mosp /build
 
@@ -52,7 +55,7 @@ RUN set -eux; \
 # ---------------------------------------------------------------------------
 # 3. 実行イメージ
 # ---------------------------------------------------------------------------
-FROM ${TOMCAT_IMAGE} AS runtime
+FROM ${TOMCAT_RUNTIME_IMAGE} AS runtime
 ARG CONTEXT_PATH
 ARG MOSP_REF
 ENV CONTEXT_PATH=${CONTEXT_PATH}
