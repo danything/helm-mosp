@@ -6,7 +6,7 @@
 
 - [`Dockerfile`](Dockerfile) — [es-mind/MosP](https://github.com/es-mind/MosP) のソースを取得し、Tomcat 9 (OpenJDK 17) 上で動作するイメージをビルドします。
 - [`docker-entrypoint.sh`](docker-entrypoint.sh) — 起動時に環境変数 (`MOSP_DB_URL` / `MOSP_DB_USER` / `MOSP_DB_PASSWORD` / `MOSP_DB_DRIVER`) からDB接続設定を反映します。
-- [`.github/workflows/build-and-push.yml`](.github/workflows/build-and-push.yml) — 毎日03:00 JSTにMosPの最新コミットを確認し、未ビルドであればイメージをビルドして `ghcr.io/<owner>/<repo>` にpushします。
+- [`.github/workflows/build-and-push.yml`](.github/workflows/build-and-push.yml) — 毎月1日03:00 JSTにMosPの最新コミットを確認し、未ビルドであればイメージをビルドして `ghcr.io/<owner>/mosp` にpushします。
 
 ## イメージの使い方
 
@@ -15,7 +15,7 @@ docker run -d -p 8080:8080 \
   -e MOSP_DB_URL="jdbc:postgresql://<db-host>:5432/mospv4" \
   -e MOSP_DB_USER="usermosp" \
   -e MOSP_DB_PASSWORD="passmosp" \
-  ghcr.io/<owner>/<repo>:latest
+  ghcr.io/<owner>/mosp:latest
 ```
 
 ## ライセンス
