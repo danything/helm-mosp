@@ -18,7 +18,7 @@ ARG CONTEXT_PATH=ROOT
 # ---------------------------------------------------------------------------
 # 1. MosPソース取得
 # ---------------------------------------------------------------------------
-FROM alpine/git:2.45.2 AS source
+FROM alpine/git:v2.54.0 AS source
 ARG MOSP_REPO_URL
 ARG MOSP_REF
 WORKDIR /src
