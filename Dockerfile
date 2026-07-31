@@ -11,8 +11,8 @@ ARG MOSP_REPO_URL=https://github.com/es-mind/MosP.git
 ARG MOSP_REF=master
 # ビルド(javac)にはJDKが必要だが、実行はJREのみで足りるため
 # ベースイメージを分けて最終イメージからJDK/コンパイラ分の容量を削る。
-ARG TOMCAT_BUILD_IMAGE=tomcat:9.0-jdk17-temurin
-ARG TOMCAT_RUNTIME_IMAGE=tomcat:9.0-jre17-temurin
+ARG TOMCAT_BUILD_IMAGE=tomcat:11.0-jdk17-temurin
+ARG TOMCAT_RUNTIME_IMAGE=tomcat:11.0-jre17-temurin
 ARG CONTEXT_PATH=ROOT
 
 # ---------------------------------------------------------------------------
