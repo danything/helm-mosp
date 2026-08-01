@@ -110,6 +110,6 @@ spec:
 ## ライセンス
 
 - 本リポジトリ（Dockerfile・GitHub Actionsワークフロー・entrypointスクリプト・Helm chart）は [GNU Affero General Public License v3.0 (AGPL-3.0-or-later)](LICENSE) の下で提供します。
-- ビルドされるDockerイメージには [MosP勤怠管理](https://github.com/es-mind/MosP)（Copyright (C) esMind, LLC、同じく AGPL-3.0-or-later）のコンパイル済みコードが含まれます。MosP自体のライセンス条項は [es-mind/MosP の LICENSE](https://github.com/es-mind/MosP/blob/master/LICENSE) を参照してください。イメージ内のMosPに加えている変更は上記の起動ページの書き換えのみで、内容は [`Dockerfile`](Dockerfile) から確認できます。
+- ビルドされるDockerイメージには [MosP勤怠管理](https://github.com/es-mind/MosP)（Copyright (C) esMind, LLC、同じく AGPL-3.0-or-later）のコンパイル済みコードが含まれます。MosP自体のライセンス条項は [es-mind/MosP の LICENSE](https://github.com/es-mind/MosP/blob/master/LICENSE) を参照してください。イメージ内のMosPに加えている変更(起動ページの書き換えと、初回セットアップまわりの `FirstUserAction` / `SetupFinishAction` へのパッチ)は、すべて [`Dockerfile`](Dockerfile) 内のsedとして内容を確認できます。
 - AGPLv3は、ネットワーク経由でプログラムを利用させる場合にも対応するソースコードの入手手段を利用者に提供することを求めます（第13条）。本イメージがビルドされたMosPのコミットSHAは、イメージ内の `COMMIT_SHA` ファイル、およびGitHub Actionsが払い出すイメージタグ（コミットSHAの先頭12桁）から追跡できます。
 - 「MosP」はesMind, LLCのプロダクト名です。本リポジトリ名を`mosp`ではなく`helm-mosp`としているのも、公式プロジェクトと誤認されないようにするためです。
