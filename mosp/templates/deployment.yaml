@@ -27,8 +27,11 @@ spec:
               value: {{ .Values.timezone }}
             - name: POSTGRES_USER
               value: {{ .Values.postgresql.superuser }}
-            - name: POSTGRES_DB
-              value: {{ .Values.postgresql.database }}
+            # POSTGRES_DB (= postgresql.database) はあえて渡さない。MosPの
+            # 初期セットアップウィザードが自分でCREATE DATABASEするため、
+            # 先に同名のDBを作っておくと「既に存在しています」(SUE005)で
+            # 先に進めなくなる。ここで作られるのはスーパユーザ名と同名の
+            # DBだけで、MosPが使うDBはウィザードが作る。
             - name: PGDATA
               value: /var/lib/postgresql/data/pgdata
             - name: POSTGRES_PASSWORD

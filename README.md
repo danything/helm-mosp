@@ -5,7 +5,7 @@
 ## 構成
 
 - [`Dockerfile`](Dockerfile) — [es-mind/MosP](https://github.com/es-mind/MosP) のソースを取得し、Tomcat 9 (OpenJDK 17) 上で動作するイメージをビルドします。
-- [`docker-entrypoint.sh`](docker-entrypoint.sh) — 起動時に環境変数 (`MOSP_DB_URL` / `MOSP_DB_USER` / `MOSP_DB_PASSWORD` / `MOSP_DB_DRIVER`) からDB接続設定を反映します。
+- [`docker-entrypoint.sh`](docker-entrypoint.sh) — 起動時に環境変数 (`MOSP_DB_URL` / `MOSP_DB_USER` / `MOSP_DB_PASSWORD` / `MOSP_DB_DRIVER`) からDB接続設定を、`MOSP_DB_SUPERUSER` / `MOSP_DB_SUPERUSER_PASSWORD` と合わせて初期セットアップウィザードの接続先設定を反映します。
 - [`.github/workflows/build-and-push.yml`](.github/workflows/build-and-push.yml) — 毎月1日03:00 JSTにMosPの最新コミットを確認し、未ビルドであればイメージをビルドして `ghcr.io/<owner>/mosp` にpushします(`Dockerfile`等を変更したときは同じコミットでも作り直します)。
 - [`.github/workflows/publish-chart.yml`](.github/workflows/publish-chart.yml) — `mosp/**` の変更をmainにpushすると、Helm chartをpackageして `oci://ghcr.io/<owner>/charts/mosp` にpushします。
 - [`mosp/`](mosp/) — Kubernetesへデプロイするための汎用Helm chart。ディレクトリ名はchart名と一致させる必要があるため `mosp` としています。
@@ -27,7 +27,7 @@ MosPのwarはコンテキストパス配下(`/mosp/` 等)に置く前提で作�
 `oci://ghcr.io/danything/charts/mosp` としてOCI公開しているので、リポジトリを追加せず直接installできます。
 
 ```sh
-helm install mosp oci://ghcr.io/danything/charts/mosp --version 0.2.0 \
+helm install mosp oci://ghcr.io/danything/charts/mosp --version 0.2.1 \
   --namespace mosp --create-namespace \
   --set ingress.enabled=true \
   --set ingress.host=kintai.example.com \
@@ -48,7 +48,7 @@ helm install mosp oci://ghcr.io/danything/charts/mosp --version 0.2.0 \
 | `postgresql.image.repository` / `.tag` | `postgres` / `13` | MosPの[推奨環境](https://www.e-s-mind.com/environment/)に合わせてPostgreSQL 13系に固定している(Renovateの更新対象からも13系以外を除外) |
 | `postgresql.superuser` | `mosp` | DBコンテナを初期化するスーパユーザ。初期セットアップウィザードがDB・ロールの作成に使う |
 | `postgresql.user` | `usermosp` | 初期セットアップウィザードが作成し、以後MosPがDB接続に使うロール。`postgresql.superuser` とは別名にすること |
-| `postgresql.database` | `mospv4` | DB名 |
+| `postgresql.database` | `mospv4` | MosPが使うDB名。初期セットアップウィザードが作成するため、DBコンテナ側では作らない |
 | `postgresql.existingSecret` | `""` | 空ならchartがパスワードを自動生成してSecretを作成(`helm upgrade`時も既存値を維持)。既存Secretを使う場合はここに名前を指定。スーパユーザとMosP用ロールの双方に同じパスワードを使う |
 | `postgresql.existingSecretKey` | `db-password` | 上記Secretのキー名 |
 | `persistence.storageClassName` | `""` | 空ならクラスタのデフォルトStorageClassを使用 |
@@ -77,7 +77,7 @@ metadata:
   namespace: kube-system
 spec:
   chart: oci://ghcr.io/danything/charts/mosp
-  version: 0.2.0
+  version: 0.2.1
   targetNamespace: mosp
   createNamespace: true
   values:
