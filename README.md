@@ -7,7 +7,8 @@
 - [`Dockerfile`](Dockerfile) — [es-mind/MosP](https://github.com/es-mind/MosP) のソースを取得し、Tomcat 9 (OpenJDK 17) 上で動作するイメージをビルドします。
 - [`docker-entrypoint.sh`](docker-entrypoint.sh) — 起動時に環境変数 (`MOSP_DB_URL` / `MOSP_DB_USER` / `MOSP_DB_PASSWORD` / `MOSP_DB_DRIVER`) からDB接続設定を反映します。
 - [`.github/workflows/build-and-push.yml`](.github/workflows/build-and-push.yml) — 毎月1日03:00 JSTにMosPの最新コミットを確認し、未ビルドであればイメージをビルドして `ghcr.io/<owner>/mosp` にpush、`k3s/deployment.yaml` のimageタグを新しいコミットSHAに書き換えてpushします(ArgoCDが検知して自動デプロイする想定)。
-- [`k3s/`](k3s/) — [danything/k3s-mirakurun-epgstation](https://github.com/danything/k3s-mirakurun-epgstation) と同じ構成のk3sマニフェスト一式(下記参照)。
+- [`k3s/`](k3s/) — [danything/k3s-mirakurun-epgstation](https://github.com/danything/k3s-mirakurun-epgstation) と同じ構成の、このリポジトリ自身の環境(`mp.doany.io`)向けの生k3sマニフェスト一式(下記参照)。ArgoCDでこのリポジトリを直接見て運用する前提。
+- [`chart/mosp/`](chart/mosp/) — 他の環境/他人が自分のクラスタにデプロイするための汎用Helm chart。ドメインやPVCサイズ等は`values.yaml`でカスタマイズする(詳細は[chart/mosp/README.md](chart/mosp/README.md))。
 
 ## イメージの使い方
 

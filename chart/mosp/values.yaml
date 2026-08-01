@@ -1,0 +1,54 @@
+# デフォルトはTraefik固有のIngressRouteを使わず、クラスタ非依存で
+# そのまま `helm install` できる状態にしてある。外部公開する場合は
+# ingress.* を環境に合わせて上書きすること。
+
+image:
+  repository: ghcr.io/danything/mosp
+  tag: latest
+  pullPolicy: IfNotPresent
+
+timezone: Asia/Tokyo
+
+service:
+  port: 8080
+
+postgresql:
+  image:
+    repository: postgres
+    tag: "13"
+  user: mosp
+  database: mospv4
+  # 空ならチャートがパスワードを自動生成してSecretを作成する
+  # (helm upgrade時もSecretの既存値を引き継ぐので毎回変わらない)。
+  # 既存のSecret(例: 外部でkubesealしたSealedSecretの復号結果)を
+  # 使いたい場合はここに名前とキーを指定する。
+  existingSecret: ""
+  existingSecretKey: db-password
+
+persistence:
+  # 空ならクラスタのデフォルトStorageClassを使う
+  storageClassName: ""
+  db:
+    size: 5Gi
+  logs:
+    enabled: true
+    size: 1Gi
+
+resources: {}
+
+# mospコンテナに追加で渡す環境変数
+extraEnv: []
+# - name: MOSP_DB_DRIVER
+#   value: org.postgresql.Driver
+
+ingress:
+  enabled: false
+  # 現状Traefik IngressRoute CRD専用。他のIngress Controllerを使う場合は
+  # templates/ingress.yaml を書き換えること。
+  host: mosp.example.com
+  entryPoints:
+    - websecure
+  # 空ならtlsブロック自体を出力しない
+  certResolver: ""
+  # 例: [{name: forward-auth, namespace: auth}]
+  middlewares: []
