@@ -26,7 +26,7 @@ spec:
             - name: TZ
               value: {{ .Values.timezone }}
             - name: POSTGRES_USER
-              value: {{ .Values.postgresql.user }}
+              value: {{ .Values.postgresql.superuser }}
             - name: POSTGRES_DB
               value: {{ .Values.postgresql.database }}
             - name: PGDATA
@@ -82,6 +82,16 @@ spec:
             - name: MOSP_DB_USER
               value: {{ .Values.postgresql.user }}
             - name: MOSP_DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "mosp.dbSecretName" . }}
+                  key: {{ .Values.postgresql.existingSecretKey }}
+            # 初回セットアップウィザードがDBとロールを作るときに使う接続情報
+            # (MosPのデフォルトはlocalhostのpostgres固定で、そのままでは
+            # このチャートが立てたDBに接続できない)。
+            - name: MOSP_DB_SUPERUSER
+              value: {{ .Values.postgresql.superuser }}
+            - name: MOSP_DB_SUPERUSER_PASSWORD
               valueFrom:
                 secretKeyRef:
                   name: {{ include "mosp.dbSecretName" . }}

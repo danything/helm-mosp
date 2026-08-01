@@ -27,7 +27,7 @@ MosPのwarはコンテキストパス配下(`/mosp/` 等)に置く前提で作�
 `oci://ghcr.io/danything/charts/mosp` としてOCI公開しているので、リポジトリを追加せず直接installできます。
 
 ```sh
-helm install mosp oci://ghcr.io/danything/charts/mosp --version 0.1.1 \
+helm install mosp oci://ghcr.io/danything/charts/mosp --version 0.2.0 \
   --namespace mosp --create-namespace \
   --set ingress.enabled=true \
   --set ingress.host=kintai.example.com \
@@ -46,9 +46,10 @@ helm install mosp oci://ghcr.io/danything/charts/mosp --version 0.1.1 \
 | `timezone` | `Asia/Tokyo` | 各コンテナの `TZ` |
 | `service.port` | `8080` | mosp Serviceの公開ポート |
 | `postgresql.image.repository` / `.tag` | `postgres` / `13` | MosPの[推奨環境](https://www.e-s-mind.com/environment/)に合わせてPostgreSQL 13系に固定している(Renovateの更新対象からも13系以外を除外) |
-| `postgresql.user` | `mosp` | DBユーザー名 |
+| `postgresql.superuser` | `mosp` | DBコンテナを初期化するスーパユーザ。初期セットアップウィザードがDB・ロールの作成に使う |
+| `postgresql.user` | `usermosp` | 初期セットアップウィザードが作成し、以後MosPがDB接続に使うロール。`postgresql.superuser` とは別名にすること |
 | `postgresql.database` | `mospv4` | DB名 |
-| `postgresql.existingSecret` | `""` | 空ならchartがパスワードを自動生成してSecretを作成(`helm upgrade`時も既存値を維持)。既存Secretを使う場合はここに名前を指定 |
+| `postgresql.existingSecret` | `""` | 空ならchartがパスワードを自動生成してSecretを作成(`helm upgrade`時も既存値を維持)。既存Secretを使う場合はここに名前を指定。スーパユーザとMosP用ロールの双方に同じパスワードを使う |
 | `postgresql.existingSecretKey` | `db-password` | 上記Secretのキー名 |
 | `persistence.storageClassName` | `""` | 空ならクラスタのデフォルトStorageClassを使用 |
 | `persistence.db.size` | `5Gi` | DB用PVCサイズ |
@@ -76,7 +77,7 @@ metadata:
   namespace: kube-system
 spec:
   chart: oci://ghcr.io/danything/charts/mosp
-  version: 0.1.1
+  version: 0.2.0
   targetNamespace: mosp
   createNamespace: true
   values:
@@ -92,7 +93,15 @@ spec:
 
 ### 初回のDBセットアップ
 
-MosPにはブラウザから使える初期セットアップウィザード(DB作成・初期管理者ユーザー作成)が組み込まれているため、`sql/*.sql` を手動で流し込む必要はありません。Podが起動したら、アプリにアクセスして初期セットアップ画面の案内に従ってください。手順の詳細は[esMindの環境構築手順](https://www.e-s-mind.com/download/)を参照してください。
+MosPにはブラウザから使える初期セットアップウィザード(DB作成・初期管理者ユーザー作成)が組み込まれているため、`sql/*.sql` を手動で流し込む必要はありません。トップページはログイン画面なので、Podが起動したら **`https://<ホスト名>/pub/common/html/setup.html`** を開いてウィザードを実行してください。管理者のIDとパスワードは決め打ちではなく、ウィザードの「最初のユーザー」画面で自分で設定します。手順の詳細は[esMindの環境構築手順](https://www.e-s-mind.com/download/)を参照してください。
+
+ウィザードはDB接続画面で「サーバ/ポート番号/Postgresパスワード」を訊いてきます。サーバ名・ポート・DB名・作成するロール名はこのchartの設定から自動で埋まるので、入力するのは `postgresql.existingSecretKey` (既定では `db-password`) のパスワードだけです。
+
+```sh
+kubectl -n mosp get secret <Secret名> -o jsonpath='{.data.db-password}' | base64 -d
+```
+
+MosPのウィザードは本来 `localhost` の `postgres` スーパユーザ固定でDBに接続する作りで、そのままではこのchartが立てたPostgreSQLに接続できません(`SUE001 接続できませんでした`)。イメージのentrypointが起動時に `WEB-INF/xml/setup.xml` へ実際の接続先を書き込むことで、この画面が通るようにしています。
 
 ## ライセンス
 

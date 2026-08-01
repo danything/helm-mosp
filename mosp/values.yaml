@@ -19,8 +19,17 @@ postgresql:
     # (https://www.e-s-mind.com/environment/)。Renovateにも13系以外へは
     # 上げさせない設定を入れてあるので、上げる場合はrenovate.jsonも直すこと。
     tag: "13"
-  user: mosp
+  # DBコンテナを初期化するスーパユーザ。MosPの初回セットアップウィザードは
+  # このユーザでDBに接続してデータベースとロールを作るため、ウィザード側の
+  # 設定(setup.xmlのSuperUserName)にも同じ値を渡している。
+  superuser: mosp
+  # セットアップウィザードが作成し、以後MosPがDB接続に使うロール。
+  # sql/grant.sql の権限付与先(usermosp)はウィザードがこの名前に置換する。
+  # superuserと同じ名前にするとウィザードのDROP ROLEが自分自身を消せずに
+  # 失敗するため、別の名前にしておくこと。
+  user: usermosp
   database: mospv4
+  # スーパユーザとMosP用ロールの双方にこのパスワードを使う。
   # 空ならチャートがパスワードを自動生成してSecretを作成する
   # (helm upgrade時もSecretの既存値を引き継ぐので毎回変わらない)。
   # 既存のSecret(例: 外部でkubesealしたSealedSecretの復号結果)を
