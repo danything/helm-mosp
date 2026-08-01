@@ -1,6 +1,14 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": [
-    "config:recommended"
+    "github>5ym/renovate-config"
+  ],
+  "packageRules": [
+    {
+      "description": "MosP勤怠管理の動作環境として案内されているTomcat 9.0系のみに更新を限定する (https://www.e-s-mind.com/environment/)",
+      "matchDatasources": ["docker"],
+      "matchPackageNames": ["tomcat"],
+      "allowedVersions": "/^9\\.0(\\.|-|$)/"
+    }
   ]
 }
