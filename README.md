@@ -27,7 +27,7 @@ MosPのwarはコンテキストパス配下(`/mosp/` 等)に置く前提で作�
 `oci://ghcr.io/danything/charts/mosp` としてOCI公開しているので、リポジトリを追加せず直接installできます。
 
 ```sh
-helm install mosp oci://ghcr.io/danything/charts/mosp --version 0.3.0 \
+helm install mosp oci://ghcr.io/danything/charts/mosp --version 0.3.1 \
   --namespace mosp --create-namespace \
   --set ingress.enabled=true \
   --set ingress.host=kintai.example.com \
@@ -77,7 +77,7 @@ metadata:
   namespace: kube-system
 spec:
   chart: oci://ghcr.io/danything/charts/mosp
-  version: 0.3.0
+  version: 0.3.1
   targetNamespace: mosp
   createNamespace: true
   values:

@@ -50,6 +50,20 @@ RUN set -eux; \
     sed -i 's#return mospParams.getStoredVo(DbCreateVo.class.getName()) != null;#return mospParams.getStoredVo(DbCreateVo.class.getName()) != null || jp.mosp.setup.constant.SetUpStatus.EMPTY.equals(jp.mosp.setup.bean.impl.DbSetUpManagement.getInstance(mospParams, null).confirm());#' "$f"; \
     grep -q 'SetUpStatus.EMPTY.equals' "$f"
 
+# 登録完了画面は、ウィザードのDB作成画面のVOから作成したDB名・ロール名・
+# ロールパスワードを読んで表示する。DB作成画面を通らない構成ではこのVOが
+# 無くNPEになる(登録自体は完了した後なので、成功したのに画面だけ落ちる)ため、
+# DB欄は空で表示する。ユーザ登録画面のVOも無い場合は、ウィザードを経ずに
+# この画面だけ叩かれた場合なのでログイン画面へ送る。
+RUN set -eux; \
+    f=src/jp/mosp/setup/action/SetupFinishAction.java; \
+    sed -i \
+      -e 's#DbCreateVo createVo = (DbCreateVo)mospParams.getStoredVo(DbCreateVo.class.getName());#DbCreateVo createVo = (DbCreateVo)mospParams.getStoredVo(DbCreateVo.class.getName()); if (createVo == null) { createVo = new DbCreateVo(); createVo.setTxtDbName(""); createVo.setTxtRoleName(""); createVo.setTxtRolePw(""); }#' \
+      -e 's#FirstUserVo userVo = (FirstUserVo)mospParams.getStoredVo(FirstUserVo.class.getName());#FirstUserVo userVo = (FirstUserVo)mospParams.getStoredVo(FirstUserVo.class.getName()); if (userVo == null) { mospParams.setNextCommand(jp.mosp.platform.portal.action.IndexAction.CMD_SHOW); return; }#' \
+      "$f"; \
+    grep -q 'createVo = new DbCreateVo();' "$f"; \
+    grep -q 'IndexAction.CMD_SHOW); return;' "$f"
+
 RUN set -eux; \
     mkdir -p WEB-INF/classes; \
     find WEB-INF/lib -name '*.jar' > /tmp/classpath.txt; \

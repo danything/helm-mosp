@@ -2,7 +2,7 @@ apiVersion: v2
 name: mosp
 description: MosP勤怠管理 (https://github.com/es-mind/MosP) をTomcat + PostgreSQLで動かすHelm chart
 type: application
-version: 0.3.0
+version: 0.3.1
 appVersion: latest
 home: https://github.com/danything/helm-mosp
 sources:
