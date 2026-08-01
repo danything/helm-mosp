@@ -26,14 +26,16 @@ docker run -d -p 8080:8080 \
 - **StorageClass `local-path-retain`**: `k3s/pvc.yaml` の全PVCが参照。`reclaimPolicy: Retain` の local-path プロビジョナー。
 - **`auth` namespaceとTraefik Middleware**: `k3s/ingress.yaml` が参照する `forward-auth`(OIDCによるログイン要求)Middlewareが `auth` namespaceに必要。MosPアプリ自体にもログイン機能はありますが、外部公開する`mp.doany.io`側はforward-authによる二重防御にしています。
 - **Traefik のCRD/証明書設定**: `mydnschallenge` certResolver(Cloudflare DNS-01でのワイルドカード証明書取得)、および `providers.kubernetesCRD.allowCrossNamespace: true`(namespaceをまたいだMiddleware参照を許可)が有効になっていること。
-- **Sealed Secrets controller**: `kube-system` namespaceの `sealed-secrets-controller`。`k3s/sealed-secret.yaml` はプレースホルダのため、適用前に以下を実行して`encryptedData`を実際の値に置き換えてください。
+- **Sealed Secrets controller**: `kube-system` namespaceの `sealed-secrets-controller`。`k3s/sealed-secret.yaml` は生成済み(`bootstrap/kubeseal.sh`でランダムパスワードをsealしたもの)。パスワードを再発行したい場合は、bootstrapリポジトリのホストで以下を実行して作り直してください。
 
   ```sh
   kubectl create secret generic mosp-secrets \
     --namespace mosp \
-    --from-literal=db-password='<任意の強いパスワード>' \
-    --dry-run=client -o yaml \
-  | kubeseal --format yaml
+    --from-literal=db-password="$(openssl rand -base64 24)" \
+    --dry-run=client -o yaml > /tmp/mosp-secrets.yaml
+  ~/bootstrap/kubeseal.sh /tmp/mosp-secrets.yaml
+  rm /tmp/mosp-secrets.yaml
+  # 出力された mosp-secrets-sealed.yaml の中身で k3s/sealed-secret.yaml を上書き
   ```
 
 - **ArgoCD**: このリポジトリに `argocd` topicを付与すると、push時にArgoCDへのwebhookが自動登録される運用です(現時点では未設定)。ArgoCD Application自体はこのリポジトリにもbootstrap側にもマニフェストとして存在しない前提です。
