@@ -73,6 +73,92 @@ spec:
         {{- include "mosp.labels" . | nindent 8 }}
         app.kubernetes.io/component: app
     spec:
+      # MosPが使うロール・データベース・スキーマを用意する。本来は初回セット
+      # アップウィザードのDB作成画面がやる処理で、イメージ同梱の同じSQLを
+      # 同じ手順(スーパユーザでDDL → grantファイルはロール名を置換して実行)で
+      # 流している。DBが既にあれば何もしないので、Podが作り直されても素通りする。
+      initContainers:
+        - name: copy-sql
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command:
+            - sh
+            - -c
+            - cp -a /usr/local/tomcat/webapps/ROOT/sql/. /mosp-sql/
+          volumeMounts:
+            - name: sql
+              mountPath: /mosp-sql
+        - name: db-bootstrap
+          image: "{{ .Values.postgresql.image.repository }}:{{ .Values.postgresql.image.tag }}"
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: TZ
+              value: {{ .Values.timezone }}
+            - name: PGHOST
+              value: {{ include "mosp.fullname" . }}-db
+            - name: PGPORT
+              value: "5432"
+            - name: PGDATABASE
+              value: postgres
+            - name: PGUSER
+              value: {{ .Values.postgresql.superuser }}
+            - name: PGPASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "mosp.dbSecretName" . }}
+                  key: {{ .Values.postgresql.existingSecretKey }}
+            - name: MOSP_DB
+              value: {{ .Values.postgresql.database }}
+            - name: MOSP_ROLE
+              value: {{ .Values.postgresql.user }}
+            - name: MOSP_ROLE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "mosp.dbSecretName" . }}
+                  key: {{ .Values.postgresql.existingSecretKey }}
+          command:
+            - sh
+            - -c
+            - |
+              set -eu
+              until pg_isready -q; do
+                echo "waiting for postgres at $PGHOST:$PGPORT"
+                sleep 2
+              done
+              if [ -n "$(psql -tAc "SELECT 1 FROM pg_database WHERE datname = '$MOSP_DB'")" ]; then
+                echo "database $MOSP_DB already exists; leaving it as it is"
+                exit 0
+              fi
+              if [ -z "$(psql -tAc "SELECT 1 FROM pg_roles WHERE rolname = '$MOSP_ROLE'")" ]; then
+                echo "creating role $MOSP_ROLE"
+                psql -q -v ON_ERROR_STOP=1 -v role="$MOSP_ROLE" -v pw="$MOSP_ROLE_PASSWORD" <<'SQL'
+              CREATE ROLE :"role" WITH LOGIN PASSWORD :'pw';
+              SQL
+              fi
+              echo "creating database $MOSP_DB"
+              psql -q -v ON_ERROR_STOP=1 -v db="$MOSP_DB" <<'SQL'
+              CREATE DATABASE :"db" ENCODING 'UTF8' TEMPLATE template0;
+              SQL
+              for f in $(ls /mosp-sql/*.sql | sort); do
+                case "$(basename "$f")" in
+                  *grant*) continue ;;
+                esac
+                echo "applying $(basename "$f")"
+                psql -q -v ON_ERROR_STOP=1 -d "$MOSP_DB" -f "$f"
+              done
+              # grantファイルの権限付与先はMosPが置換する前提の固定名(usermosp)。
+              for f in $(ls /mosp-sql/*grant*.sql | sort); do
+                echo "applying $(basename "$f")"
+                sed "s/usermosp/$MOSP_ROLE/g" "$f" | psql -q -v ON_ERROR_STOP=1 -d "$MOSP_DB"
+              done
+              echo "bootstrap done"
+          volumeMounts:
+            - name: sql
+              mountPath: /mosp-sql
+          {{- with .Values.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
       containers:
         - name: mosp
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
@@ -108,9 +194,11 @@ spec:
           resources:
             {{- toYaml . | nindent 12 }}
           {{- end }}
-      {{- if .Values.persistence.logs.enabled }}
       volumes:
+        - name: sql
+          emptyDir: {}
+        {{- if .Values.persistence.logs.enabled }}
         - name: logs
           persistentVolumeClaim:
             claimName: {{ include "mosp.fullname" . }}-logs
-      {{- end }}
+        {{- end }}

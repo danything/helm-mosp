@@ -38,6 +38,18 @@ FROM ${TOMCAT_BUILD_IMAGE} AS build
 WORKDIR /build
 COPY --from=source /src/mosp /build
 
+# 初回ユーザ登録画面(SU3000)は、セットアップウィザードのDB作成画面を
+# セッションで経由したかを確認し、経由していなければログイン画面へ飛ばす。
+# DBをコンテナ側で用意する構成ではこの画面を通らないため、有効なユーザが
+# まだ1人も居ない場合に限り直接開けるようにする。判定にはMosP自身が
+# DB接続画面で使っている confirm() (既存のconnection.xmlで接続し、有効な
+# ユーザの有無を返す) をそのまま使うので、登録が済んだ時点で自動的に
+# 従来どおりログイン画面へ戻る。
+RUN set -eux; \
+    f=src/jp/mosp/setup/action/FirstUserAction.java; \
+    sed -i 's#return mospParams.getStoredVo(DbCreateVo.class.getName()) != null;#return mospParams.getStoredVo(DbCreateVo.class.getName()) != null || jp.mosp.setup.constant.SetUpStatus.EMPTY.equals(jp.mosp.setup.bean.impl.DbSetUpManagement.getInstance(mospParams, null).confirm());#' "$f"; \
+    grep -q 'SetUpStatus.EMPTY.equals' "$f"
+
 RUN set -eux; \
     mkdir -p WEB-INF/classes; \
     find WEB-INF/lib -name '*.jar' > /tmp/classpath.txt; \
@@ -97,6 +109,16 @@ RUN set -eux; \
       grep -q 'pathArray.length > 2' "$index"; \
       grep -q 'value = pathArray\[2\]' "$index"; \
     fi
+
+# トップページの遷移先をログイン画面(PF0010)から初回ユーザ登録画面(SU3000)に
+# する。DBが用意済みで有効なユーザが居なければ登録画面、居ればMosP自身が
+# ログイン画面へ転送するので、初回だけ登録画面が出て以後はログイン画面になる。
+# DBを用意していない場合(素のdocker run等)はログイン画面に転送されるだけなので、
+# 従来どおりのセットアップウィザード(pub/common/html/setup.html)を使うこと。
+RUN set -eux; \
+    index="$CATALINA_HOME/webapps/${CONTEXT_PATH}/pub/common/html/index.html"; \
+    sed -i 's#name = "cmd" value="PF0010"#name = "cmd" value="SU3000"#' "$index"; \
+    grep -q 'value="SU3000"' "$index"
 
 COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 RUN chmod +x /usr/local/bin/docker-entrypoint.sh

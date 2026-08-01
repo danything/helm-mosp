@@ -8,7 +8,7 @@
 - [`docker-entrypoint.sh`](docker-entrypoint.sh) — 起動時に環境変数 (`MOSP_DB_URL` / `MOSP_DB_USER` / `MOSP_DB_PASSWORD` / `MOSP_DB_DRIVER`) からDB接続設定を、`MOSP_DB_SUPERUSER` と合わせて初期セットアップウィザードの接続先設定を反映します。
 - [`.github/workflows/build-and-push.yml`](.github/workflows/build-and-push.yml) — 毎月1日03:00 JSTにMosPの最新コミットを確認し、未ビルドであればイメージをビルドして `ghcr.io/<owner>/mosp` にpushします(`Dockerfile`等を変更したときは同じコミットでも作り直します)。
 - [`.github/workflows/publish-chart.yml`](.github/workflows/publish-chart.yml) — `mosp/**` の変更をmainにpushすると、Helm chartをpackageして `oci://ghcr.io/<owner>/charts/mosp` にpushします。
-- [`mosp/`](mosp/) — Kubernetesへデプロイするための汎用Helm chart。ディレクトリ名はchart名と一致させる必要があるため `mosp` としています。
+- [`mosp/`](mosp/) — Kubernetesへデプロイするための汎用Helm chart。ディレクトリ名はchart名と一致させる必要があるため `mosp` としています。DBの初期構築(ロール・データベース・スキーマ)もinit containerで行うため、インストール後はブラウザで最初のユーザーを登録するだけで使い始められます。
 
 ## イメージの使い方
 
@@ -27,7 +27,7 @@ MosPのwarはコンテキストパス配下(`/mosp/` 等)に置く前提で作�
 `oci://ghcr.io/danything/charts/mosp` としてOCI公開しているので、リポジトリを追加せず直接installできます。
 
 ```sh
-helm install mosp oci://ghcr.io/danything/charts/mosp --version 0.2.2 \
+helm install mosp oci://ghcr.io/danything/charts/mosp --version 0.3.0 \
   --namespace mosp --create-namespace \
   --set ingress.enabled=true \
   --set ingress.host=kintai.example.com \
@@ -46,9 +46,9 @@ helm install mosp oci://ghcr.io/danything/charts/mosp --version 0.2.2 \
 | `timezone` | `Asia/Tokyo` | 各コンテナの `TZ` |
 | `service.port` | `8080` | mosp Serviceの公開ポート |
 | `postgresql.image.repository` / `.tag` | `postgres` / `13` | MosPの[推奨環境](https://www.e-s-mind.com/environment/)に合わせてPostgreSQL 13系に固定している(Renovateの更新対象からも13系以外を除外) |
-| `postgresql.superuser` | `mosp` | DBコンテナを初期化するスーパユーザ。初期セットアップウィザードがDB・ロールの作成に使う |
-| `postgresql.user` | `usermosp` | 初期セットアップウィザードが作成し、以後MosPがDB接続に使うロール。`postgresql.superuser` とは別名にすること |
-| `postgresql.database` | `mospv4` | MosPが使うDB名。初期セットアップウィザードが作成するため、DBコンテナ側では作らない |
+| `postgresql.superuser` | `mosp` | DBコンテナを初期化するスーパユーザ。DB・ロール・スキーマの作成に使う |
+| `postgresql.user` | `usermosp` | MosPがDB接続に使うロール。init containerが作成する。`postgresql.superuser` とは別名にすること |
+| `postgresql.database` | `mospv4` | MosPが使うDB名。init containerが作成するため、DBコンテナ側では作らない |
 | `postgresql.existingSecret` | `""` | 空ならchartがパスワードを自動生成してSecretを作成(`helm upgrade`時も既存値を維持)。既存Secretを使う場合はここに名前を指定。スーパユーザとMosP用ロールの双方に同じパスワードを使う |
 | `postgresql.existingSecretKey` | `db-password` | 上記Secretのキー名 |
 | `persistence.storageClassName` | `""` | 空ならクラスタのデフォルトStorageClassを使用 |
@@ -77,7 +77,7 @@ metadata:
   namespace: kube-system
 spec:
   chart: oci://ghcr.io/danything/charts/mosp
-  version: 0.2.2
+  version: 0.3.0
   targetNamespace: mosp
   createNamespace: true
   values:
@@ -91,19 +91,21 @@ spec:
       existingSecret: mosp-secrets
 ```
 
-### 初回のDBセットアップ
+### 初回セットアップ
 
-MosPにはブラウザから使える初期セットアップウィザード(DB作成・初期管理者ユーザー作成)が組み込まれているため、`sql/*.sql` を手動で流し込む必要はありません。トップページはログイン画面なので、Podが起動したら **`https://<ホスト名>/pub/common/html/setup.html`** を開いてウィザードを実行してください。管理者のIDとパスワードは決め打ちではなく、ウィザードの「最初のユーザー」画面で自分で設定します。手順の詳細は[esMindの環境構築手順](https://www.e-s-mind.com/download/)を参照してください。
+**インストールしたらホスト名を開くだけです。** DBの作成もスキーマの投入もchartが済ませてあるので、最初の画面はMosPの「最初のユーザー」登録になります。氏名とユーザーIDを入れて登録すると、以後そのURLは通常のログイン画面に変わります(この出し分けはMosP自身の判定を使っているので、切り替えは自動です)。
 
-ウィザードはDB接続画面で「サーバ/ポート番号/Postgresパスワード」を訊いてきます。サーバ名・ポート・DB名・作成するロール名はこのchartの設定から自動で埋まるので、入力するのは `postgresql.existingSecretKey` (既定では `db-password`) のパスワードだけです。
+登録直後のパスワードはMosPの仕様で**ユーザーIDと同じ値**です(初期パスワードはユーザーIDから生成されます)。最初のログイン時にパスワード変更を求められるので、そこで自分のパスワードを設定してください。手順の詳細は[esMindの環境構築手順](https://www.e-s-mind.com/download/)を参照してください。
 
-```sh
-kubectl -n mosp get secret <Secret名> -o jsonpath='{.data.db-password}' | base64 -d
-```
+> **注意**: デプロイしてから最初のユーザーを登録するまでの間は、そのURLを開いた誰でも管理者を作れます。公開する場所にインストールする場合は、デプロイ直後に登録を済ませてください。登録が済めば登録画面は閉じ、ログイン画面になります。
 
-MosPのウィザードは本来 `localhost` の `postgres` スーパユーザ固定でDBに接続する作りで、そのままではこのchartが立てたPostgreSQLに接続できません(`SUE001 接続できませんでした`)。イメージのentrypointが起動時に `WEB-INF/xml/setup.xml` へ実際の接続先を書き込むことで、この画面が通るようにしています。
+内部的には次のことをしています。
 
-パスワードだけは自動で埋めていません。**このウィザードは認証なしで公開されており、この入力欄が唯一のゲート**だからです(埋めるとパスワードを空欄のまま誰でも次の画面まで進めてしまい、そこにはMosP用ロールのパスワードが平文で表示されます)。パスワードが必要なのはこの初回セットアップのときだけで、以後のログインはウィザードで作った管理者アカウントを使います。MosP自身のDB接続は `connection.xml` 経由なので、パスワードを訊かれることはありません。
+- **DBの用意** — mosp Podのinit containerが、MosPの初期セットアップウィザードのDB作成画面と同じ手順(ロール作成 → `CREATE DATABASE ... ENCODING 'UTF8' TEMPLATE template0` → イメージ同梱の `sql/*.sql` をスーパユーザで実行 → `grant*.sql` は権限付与先を `postgresql.user` に置換して実行)を実行します。DBが既にあれば何もしません。
+- **登録画面の解放** — MosPの初回ユーザ登録画面は、ウィザードのDB作成画面をセッションで経由したかを確認し、経由していなければログイン画面へ飛ばします。DBをchartが用意する構成ではその画面を通らないため、**有効なユーザがまだ1人も居ない場合に限り**直接開けるよう `FirstUserAction` にビルド時パッチを当てています(判定にはMosP自身が使っている `confirm()` をそのまま利用)。
+- **トップページの遷移先** — `pub/common/html/index.html` の遷移先をログイン画面(`PF0010`)から初回ユーザ登録画面(`SU3000`)に書き換えています。
+
+素の `docker run` などDBを自分で用意する場合は、この登録画面は開かず(接続先にユーザが居るか判定できないため)ログイン画面になります。その場合はMosP本来のセットアップウィザード `https://<ホスト名>/pub/common/html/setup.html` を使ってください。ウィザードのサーバ名・ポート・DB名・ロール名は環境変数から自動で埋まりますが、「Postgresパスワード」だけは自動で埋めていません。**このウィザードは認証なしで公開されており、この入力欄が唯一のゲート**だからです。
 
 ## ライセンス
 
