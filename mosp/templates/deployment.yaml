@@ -94,11 +94,6 @@ spec:
             # このチャートが立てたDBに接続できない)。
             - name: MOSP_DB_SUPERUSER
               value: {{ .Values.postgresql.superuser }}
-            - name: MOSP_DB_SUPERUSER_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: {{ include "mosp.dbSecretName" . }}
-                  key: {{ .Values.postgresql.existingSecretKey }}
             {{- with .Values.extraEnv }}
             {{- toYaml . | nindent 12 }}
             {{- end }}

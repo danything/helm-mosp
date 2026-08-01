@@ -55,9 +55,11 @@ if [ -f "$SETUP_XML" ]; then
       ;;
   esac
   # ウィザードがDB/ロールの作成に使うスーパユーザ。
+  # パスワード(SuperUserPassword)はあえて埋めない。セットアップウィザードは
+  # 認証なしで公開されており、DB接続画面のパスワード入力がその唯一のゲートに
+  # なっている。埋めてしまうと空欄のまま誰でも次の画面まで進めてしまい、
+  # そこにはMosP用ロールのパスワードが平文で表示される。
   set_xml_value "$SETUP_XML" "SuperUserName" "${MOSP_DB_SUPERUSER:-}"
-  set_xml_value "$SETUP_XML" "SuperUserPassword" \
-    "${MOSP_DB_SUPERUSER_PASSWORD:-${MOSP_DB_PASSWORD:-}}"
   # ウィザードが作成する、MosPが以後の接続に使うロール。
   # connection.xml側と食い違うとセットアップ後にログインできなくなるため、
   # 同じ MOSP_DB_USER / MOSP_DB_PASSWORD から埋める。

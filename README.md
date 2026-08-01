@@ -5,7 +5,7 @@
 ## 構成
 
 - [`Dockerfile`](Dockerfile) — [es-mind/MosP](https://github.com/es-mind/MosP) のソースを取得し、Tomcat 9 (OpenJDK 17) 上で動作するイメージをビルドします。
-- [`docker-entrypoint.sh`](docker-entrypoint.sh) — 起動時に環境変数 (`MOSP_DB_URL` / `MOSP_DB_USER` / `MOSP_DB_PASSWORD` / `MOSP_DB_DRIVER`) からDB接続設定を、`MOSP_DB_SUPERUSER` / `MOSP_DB_SUPERUSER_PASSWORD` と合わせて初期セットアップウィザードの接続先設定を反映します。
+- [`docker-entrypoint.sh`](docker-entrypoint.sh) — 起動時に環境変数 (`MOSP_DB_URL` / `MOSP_DB_USER` / `MOSP_DB_PASSWORD` / `MOSP_DB_DRIVER`) からDB接続設定を、`MOSP_DB_SUPERUSER` と合わせて初期セットアップウィザードの接続先設定を反映します。
 - [`.github/workflows/build-and-push.yml`](.github/workflows/build-and-push.yml) — 毎月1日03:00 JSTにMosPの最新コミットを確認し、未ビルドであればイメージをビルドして `ghcr.io/<owner>/mosp` にpushします(`Dockerfile`等を変更したときは同じコミットでも作り直します)。
 - [`.github/workflows/publish-chart.yml`](.github/workflows/publish-chart.yml) — `mosp/**` の変更をmainにpushすると、Helm chartをpackageして `oci://ghcr.io/<owner>/charts/mosp` にpushします。
 - [`mosp/`](mosp/) — Kubernetesへデプロイするための汎用Helm chart。ディレクトリ名はchart名と一致させる必要があるため `mosp` としています。
@@ -27,7 +27,7 @@ MosPのwarはコンテキストパス配下(`/mosp/` 等)に置く前提で作�
 `oci://ghcr.io/danything/charts/mosp` としてOCI公開しているので、リポジトリを追加せず直接installできます。
 
 ```sh
-helm install mosp oci://ghcr.io/danything/charts/mosp --version 0.2.1 \
+helm install mosp oci://ghcr.io/danything/charts/mosp --version 0.2.2 \
   --namespace mosp --create-namespace \
   --set ingress.enabled=true \
   --set ingress.host=kintai.example.com \
@@ -77,7 +77,7 @@ metadata:
   namespace: kube-system
 spec:
   chart: oci://ghcr.io/danything/charts/mosp
-  version: 0.2.1
+  version: 0.2.2
   targetNamespace: mosp
   createNamespace: true
   values:
@@ -102,6 +102,8 @@ kubectl -n mosp get secret <Secret名> -o jsonpath='{.data.db-password}' | base6
 ```
 
 MosPのウィザードは本来 `localhost` の `postgres` スーパユーザ固定でDBに接続する作りで、そのままではこのchartが立てたPostgreSQLに接続できません(`SUE001 接続できませんでした`)。イメージのentrypointが起動時に `WEB-INF/xml/setup.xml` へ実際の接続先を書き込むことで、この画面が通るようにしています。
+
+パスワードだけは自動で埋めていません。**このウィザードは認証なしで公開されており、この入力欄が唯一のゲート**だからです(埋めるとパスワードを空欄のまま誰でも次の画面まで進めてしまい、そこにはMosP用ロールのパスワードが平文で表示されます)。パスワードが必要なのはこの初回セットアップのときだけで、以後のログインはウィザードで作った管理者アカウントを使います。MosP自身のDB接続は `connection.xml` 経由なので、パスワードを訊かれることはありません。
 
 ## ライセンス
 
