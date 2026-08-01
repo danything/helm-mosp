@@ -38,18 +38,9 @@ docker run -d -p 8080:8080 \
   # 出力された mosp-secrets-sealed.yaml の中身で k3s/sealed-secret.yaml を上書き
   ```
 
-- **ArgoCD**: このリポジトリに `argocd` topicを付与すると、push時にArgoCDへのwebhookが自動登録される運用です(現時点では未設定)。ArgoCD Application自体はこのリポジトリにもbootstrap側にもマニフェストとして存在しない前提です。
-- **DNS**: `mp.doany.io` がTraefikの外部IPを指すこと。`mp.home.arpa` はLAN内専用で、`k3s/tls-secret.yaml`(自己署名証明書、下記コマンドで生成)で処理されます。
-
-  ```sh
-  openssl ecparam -genkey -name prime256v1 -noout -out mp-home-arpa.key
-  openssl req -new -x509 -key mp-home-arpa.key -out mp-home-arpa.crt -days 3650 \
-    -subj "/CN=mp.home.arpa" -addext "subjectAltName=DNS:mp.home.arpa"
-  # k3s/tls-secret.yaml の tls.crt / tls.key を base64 -w0 の出力で埋める
-  rm mp-home-arpa.key mp-home-arpa.crt
-  ```
-
-- **GHCRイメージの公開設定**: `ghcr.io/danything/mosp` をpullできること(imagePullSecrets未設定のためpublicパッケージである前提)。
+- **ArgoCD**: ArgoCD Application自体はこのリポジトリにもbootstrap側にもマニフェストとして存在しない前提です。
+- **DNS**: `mp.doany.io` がTraefikの外部IPを指すこと。
+- **GHCRイメージの公開設定**: `ghcr.io/danything/mosp` をpullできること(imagePullSecrets未設定のためpublicパッケージである前提。設定済み)。
 
 ### 初回のDBセットアップ
 
