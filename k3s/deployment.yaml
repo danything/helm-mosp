@@ -1,0 +1,83 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: db
+  namespace: mosp
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: db
+  template:
+    metadata:
+      labels:
+        app: db
+    spec:
+      containers:
+        - name: db
+          image: postgres:13
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: TZ
+              value: Asia/Tokyo
+            - name: POSTGRES_USER
+              value: mosp
+            - name: POSTGRES_DB
+              value: mospv4
+            - name: PGDATA
+              value: /var/lib/postgresql/data/pgdata
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: mosp-secrets
+                  key: db-password
+          ports:
+            - containerPort: 5432
+          volumeMounts:
+            - name: db-data
+              mountPath: /var/lib/postgresql/data
+      volumes:
+        - name: db-data
+          persistentVolumeClaim:
+            claimName: mosp-db
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mosp
+  namespace: mosp
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mosp
+  template:
+    metadata:
+      labels:
+        app: mosp
+    spec:
+      containers:
+        - name: mosp
+          image: ghcr.io/danything/mosp:latest
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: TZ
+              value: Asia/Tokyo
+            - name: MOSP_DB_URL
+              value: jdbc:postgresql://db:5432/mospv4
+            - name: MOSP_DB_USER
+              value: mosp
+            - name: MOSP_DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: mosp-secrets
+                  key: db-password
+          ports:
+            - containerPort: 8080
+          volumeMounts:
+            - name: mosp-logs
+              mountPath: /usr/local/tomcat/webapps/ROOT/logs
+      volumes:
+        - name: mosp-logs
+          persistentVolumeClaim:
+            claimName: mosp-logs
