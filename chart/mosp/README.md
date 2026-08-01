@@ -1,16 +1,20 @@
 # mosp Helm chart
 
-[MosP勤怠管理](https://github.com/es-mind/MosP) をTomcat + PostgreSQLでKubernetes上に動かすためのHelm chartです。[danything/k3s-mosp](https://github.com/danything/k3s-mosp) が実際にビルドしているイメージ(`ghcr.io/danything/mosp`)をデフォルトで使用します。
+[MosP勤怠管理](https://github.com/es-mind/MosP) をTomcat + PostgreSQLでKubernetes上に動かすためのHelm chartです。[danything/helm-mosp](https://github.com/danything/helm-mosp) が実際にビルドしているイメージ(`ghcr.io/danything/mosp`)をデフォルトで使用します。
 
 ## インストール
 
+`oci://ghcr.io/danything/charts/mosp` としてOCI公開しているので、リポジトリを追加せず直接installできます。
+
 ```sh
-helm install mosp ./chart/mosp \
+helm install mosp oci://ghcr.io/danything/charts/mosp --version 0.1.0 \
   --namespace mosp --create-namespace \
   --set ingress.enabled=true \
   --set ingress.host=kintai.example.com \
   --set persistence.storageClassName=<自分のStorageClass>
 ```
+
+このリポジトリを直接cloneしている場合は `./chart/mosp` をパスとして指定しても同じです。
 
 Ingressを使わない場合は `kubectl port-forward` や `NodePort`/`LoadBalancer` のServiceを別途用意してアクセスしてください。
 
@@ -45,3 +49,29 @@ Ingressを使わない場合は `kubectl port-forward` や `NodePort`/`LoadBalan
 
 - `ingress.*` はTraefikの `IngressRoute` CRD専用。NGINX Ingress等を使う場合は `templates/ingress.yaml` を書き換えてください。
 - ArgoCDでの運用を想定し、PVCには `argocd.argoproj.io/sync-options: Prune=false,Delete=false` を付与しています(Application削除時にデータが消えないように)。
+
+## k3sのHelmChart CRD経由でのデプロイ例
+
+ArgoCD等でGitOps管理しているクラスタなら、k3s組み込みのhelm-controllerに直接デプロイさせることもできます。
+
+```yaml
+apiVersion: helm.cattle.io/v1
+kind: HelmChart
+metadata:
+  name: mosp
+  namespace: kube-system
+spec:
+  chart: oci://ghcr.io/danything/charts/mosp
+  version: 0.1.0
+  targetNamespace: mosp
+  createNamespace: true
+  values:
+    ingress:
+      enabled: true
+      host: mosp.example.com
+      certResolver: mydnschallenge
+    persistence:
+      storageClassName: local-path-retain
+    postgresql:
+      existingSecret: mosp-secrets
+```
