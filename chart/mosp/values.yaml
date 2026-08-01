@@ -15,7 +15,7 @@ service:
 postgresql:
   image:
     repository: postgres
-    tag: "13"
+    tag: "18"
   user: mosp
   database: mospv4
   # 空ならチャートがパスワードを自動生成してSecretを作成する
