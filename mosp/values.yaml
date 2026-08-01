@@ -15,6 +15,9 @@ service:
 postgresql:
   image:
     repository: postgres
+    # MosPの動作環境として案内されているPostgreSQL 13系に固定している
+    # (https://www.e-s-mind.com/environment/)。Renovateにも13系以外へは
+    # 上げさせない設定を入れてあるので、上げる場合はrenovate.jsonも直すこと。
     tag: "13"
   user: mosp
   database: mospv4

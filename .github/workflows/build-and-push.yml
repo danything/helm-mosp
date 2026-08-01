@@ -5,6 +5,12 @@ on:
     # 毎月1日 03:00 JST (= 前月末日 18:00 UTC) に MosP の最新コードを確認してビルド
     # (MosP本体の更新頻度は年1回程度のため、高頻度のチェックは不要)
     - cron: "0 18 1 * *"
+  push:
+    branches: [main]
+    paths:
+      - "Dockerfile"
+      - "docker-entrypoint.sh"
+      - ".github/workflows/build-and-push.yml"
   workflow_dispatch: {}
 
 permissions:
@@ -52,8 +58,13 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      # ビルド済み判定はMosPのコミットSHAだけを見るため、イメージの作り方
+      # (Dockerfile/entrypoint)を変えた場合は同じSHAでも作り直す必要がある。
+      # 定期実行のときだけスキップ判定を行い、手動実行とビルド定義の変更時は
+      # 常にビルドする。
       - name: Check if this MosP commit was already built
         id: check
+        if: github.event_name == 'schedule'
         run: |
           image="${{ steps.image.outputs.name }}:${{ steps.mosp.outputs.short_sha }}"
           if docker manifest inspect "$image" >/dev/null 2>&1; then

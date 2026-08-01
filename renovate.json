@@ -9,6 +9,12 @@
       "matchDatasources": ["docker"],
       "matchPackageNames": ["tomcat"],
       "allowedVersions": "/^9\\.0(\\.|-|$)/"
+    },
+    {
+      "description": "MosP勤怠管理の動作環境として案内されているPostgreSQL 13系のみに更新を限定する (https://www.e-s-mind.com/environment/)",
+      "matchDatasources": ["docker"],
+      "matchPackageNames": ["postgres"],
+      "allowedVersions": "/^13(\\.|-|$)/"
     }
   ]
 }

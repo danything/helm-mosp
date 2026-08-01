@@ -77,6 +77,27 @@ RUN rm -rf \
     "$CATALINA_HOME"/webapps/manager
 
 COPY --from=build /build "$CATALINA_HOME"/webapps/${CONTEXT_PATH}
+
+# MosPの起動ページ(404のerror-pageも兼ねる)は、URLの1つ目のセグメントを
+# コンテキストパスとみなして送信先を "/<ctx>/srv/" と組み立てる。
+# ROOTに配置するとこのセグメントが空になり "//srv/" ——
+# ブラウザにプロトコル相対URL(= https://srv/)と解釈されるパス —— が
+# 生成されてしまうため、ROOTのときだけコンテキストパス無しに書き換える。
+# argを拾う位置も1つ手前にずれるので合わせて調整する。
+# 書き換えが当たらなかった場合(MosP側の実装変更)はビルドを失敗させる。
+RUN set -eux; \
+    if [ "${CONTEXT_PATH}" = "ROOT" ]; then \
+      index="$CATALINA_HOME/webapps/ROOT/pub/common/html/index.html"; \
+      sed -i \
+        -e 's#form.action = "/" + pathArray\[1\] + "/srv/";#form.action = "/srv/";#' \
+        -e 's#if (pathArray.length > 3) {#if (pathArray.length > 2) {#' \
+        -e 's#document.getElementById("arg").value = pathArray\[3\]#document.getElementById("arg").value = pathArray[2]#' \
+        "$index"; \
+      grep -q 'form.action = "/srv/";' "$index"; \
+      grep -q 'pathArray.length > 2' "$index"; \
+      grep -q 'value = pathArray\[2\]' "$index"; \
+    fi
+
 COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 
