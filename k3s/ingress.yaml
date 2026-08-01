@@ -12,9 +12,6 @@ spec:
     - match: Host(`mp.doany.io`)
       kind: Rule
       priority: 50
-      middlewares:
-        - name: forward-auth
-          namespace: auth
       services:
         - name: mosp
           port: 8080

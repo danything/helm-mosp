@@ -24,8 +24,7 @@ docker run -d -p 8080:8080 \
 [danything/k3s-mirakurun-epgstation](https://github.com/danything/k3s-mirakurun-epgstation) と同じ運用を前提にしており、`k3s/` には `mosp` namespace内のマニフェストしか含まれていません。適用前にクラスタ側に以下が用意されている必要があります。
 
 - **StorageClass `local-path-retain`**: `k3s/pvc.yaml` の全PVCが参照。`reclaimPolicy: Retain` の local-path プロビジョナー。
-- **`auth` namespaceとTraefik Middleware**: `k3s/ingress.yaml` が参照する `forward-auth`(OIDCによるログイン要求)Middlewareが `auth` namespaceに必要。MosPアプリ自体にもログイン機能はありますが、外部公開する`mp.doany.io`側はforward-authによる二重防御にしています。
-- **Traefik のCRD/証明書設定**: `mydnschallenge` certResolver(Cloudflare DNS-01でのワイルドカード証明書取得)、および `providers.kubernetesCRD.allowCrossNamespace: true`(namespaceをまたいだMiddleware参照を許可)が有効になっていること。
+- **Traefik のCRD/証明書設定**: `mydnschallenge` certResolver(Cloudflare DNS-01でのワイルドカード証明書取得)が有効になっていること。MosPアプリ自体にログイン機能があるため、`k3s/ingress.yaml` はforward-auth等のMiddlewareを挟まずMosPに直接ルーティングします。
 - **Sealed Secrets controller**: `kube-system` namespaceの `sealed-secrets-controller`。`k3s/sealed-secret.yaml` は生成済み(`bootstrap/kubeseal.sh`でランダムパスワードをsealしたもの)。パスワードを再発行したい場合は、bootstrapリポジトリのホストで以下を実行して作り直してください。
 
   ```sh
