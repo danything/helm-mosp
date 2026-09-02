@@ -34,7 +34,7 @@ postgresql:
   # スーパユーザとMosP用ロールの双方にこのパスワードを使う。
   # 空ならチャートがパスワードを自動生成してSecretを作成する
   # (helm upgrade時もSecretの既存値を引き継ぐので毎回変わらない)。
-  # 既存のSecret(例: 外部でkubesealしたSealedSecretの復号結果)を
+  # 既存のSecret(例: External Secrets Operator が作ったもの)を
   # 使いたい場合はここに名前とキーを指定する。
   existingSecret: ""
   existingSecretKey: db-password
