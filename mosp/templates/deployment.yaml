@@ -81,10 +81,12 @@ spec:
         - name: copy-sql
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
-          command:
-            - sh
-            - -c
-            - cp -a /usr/local/tomcat/webapps/ROOT/sql/. /mosp-sql/
+          # イメージ (distroless) にはシェルも cp も無いので、イメージの入口
+          # (MospLauncher) の copy で写す。ENTRYPOINT はそのまま使い、args だけ渡す
+          args:
+            - copy
+            - /usr/local/tomcat/webapps/ROOT/sql
+            - /mosp-sql
           volumeMounts:
             - name: sql
               mountPath: /mosp-sql

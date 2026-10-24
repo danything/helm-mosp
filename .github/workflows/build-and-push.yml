@@ -9,7 +9,7 @@ on:
     branches: [main]
     paths:
       - "Dockerfile"
-      - "docker-entrypoint.sh"
+      - "launcher/**"
       - ".github/workflows/build-and-push.yml"
   workflow_dispatch: {}
 
@@ -59,7 +59,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       # ビルド済み判定はMosPのコミットSHAだけを見るため、イメージの作り方
-      # (Dockerfile/entrypoint)を変えた場合は同じSHAでも作り直す必要がある。
+      # (Dockerfile/launcher)を変えた場合は同じSHAでも作り直す必要がある。
       # 定期実行のときだけスキップ判定を行い、手動実行とビルド定義の変更時は
       # 常にビルドする。
       - name: Check if this MosP commit was already built
