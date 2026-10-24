@@ -5,7 +5,7 @@
 ## 構成
 
 - [`Dockerfile`](Dockerfile) — [es-mind/MosP](https://github.com/es-mind/MosP) のソースを取得し、Tomcat 9 (OpenJDK 17) 上で動作するイメージをビルドします。
-- [`docker-entrypoint.sh`](docker-entrypoint.sh) — 起動時に環境変数 (`MOSP_DB_URL` / `MOSP_DB_USER` / `MOSP_DB_PASSWORD` / `MOSP_DB_DRIVER`) からDB接続設定を、`MOSP_DB_SUPERUSER` と合わせて初期セットアップウィザードの接続先設定を反映します。
+- [`launcher/MospLauncher.java`](launcher/MospLauncher.java) — イメージの入口 (実行イメージは distroless でシェルが無いため Java で書いてある)。起動時に環境変数 (`MOSP_DB_URL` / `MOSP_DB_USER` / `MOSP_DB_PASSWORD` / `MOSP_DB_DRIVER`) からDB接続設定を、`MOSP_DB_SUPERUSER` と合わせて初期セットアップウィザードの接続先設定を反映します。
 - [`.github/workflows/build-and-push.yml`](.github/workflows/build-and-push.yml) — 毎月1日03:00 JSTにMosPの最新コミットを確認し、未ビルドであればイメージをビルドして `ghcr.io/<owner>/mosp` にpushします(`Dockerfile`等を変更したときは同じコミットでも作り直します)。
 - [`.github/workflows/publish-chart.yml`](.github/workflows/publish-chart.yml) — `mosp/**` の変更をmainにpushすると、Helm chartをpackageして `oci://ghcr.io/<owner>/charts/mosp` にpushします。
 - [`mosp/`](mosp/) — Kubernetesへデプロイするための汎用Helm chart。ディレクトリ名はchart名と一致させる必要があるため `mosp` としています。DBの初期構築(ロール・データベース・スキーマ)もinit containerで行うため、インストール後はブラウザで最初のユーザーを登録するだけで使い始められます。
@@ -109,7 +109,7 @@ spec:
 
 ## ライセンス
 
-- 本リポジトリ（Dockerfile・GitHub Actionsワークフロー・entrypointスクリプト・Helm chart）は [GNU Affero General Public License v3.0 (AGPL-3.0-or-later)](LICENSE) の下で提供します。
+- 本リポジトリ（Dockerfile・GitHub Actionsワークフロー・入口のプログラム (launcher)・Helm chart）は [GNU Affero General Public License v3.0 (AGPL-3.0-or-later)](LICENSE) の下で提供します。
 - ビルドされるDockerイメージには [MosP勤怠管理](https://github.com/es-mind/MosP)（Copyright (C) esMind, LLC、同じく AGPL-3.0-or-later）のコンパイル済みコードが含まれます。MosP自体のライセンス条項は [es-mind/MosP の LICENSE](https://github.com/es-mind/MosP/blob/master/LICENSE) を参照してください。イメージ内のMosPに加えている変更(起動ページの書き換えと、初回セットアップまわりの `FirstUserAction` / `SetupFinishAction` へのパッチ)は、すべて [`Dockerfile`](Dockerfile) 内のsedとして内容を確認できます。
 - AGPLv3は、ネットワーク経由でプログラムを利用させる場合にも対応するソースコードの入手手段を利用者に提供することを求めます（第13条）。本イメージがビルドされたMosPのコミットSHAは、イメージ内の `COMMIT_SHA` ファイル、およびGitHub Actionsが払い出すイメージタグ（コミットSHAの先頭12桁）から追跡できます。
 - 「MosP」はesMind, LLCのプロダクト名です。本リポジトリ名を`mosp`ではなく`helm-mosp`としているのも、公式プロジェクトと誤認されないようにするためです。
